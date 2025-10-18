@@ -5,9 +5,14 @@ return {
     event = { 'BufReadPre', 'BufNewFile' },
     config = function()
       local lint = require 'lint'
-      lint.linters_by_ft = {
-        markdown = { 'markdownlint' },
-      }
+      lint.linters_by_ft = lint.linters_by_ft or {}
+
+      local markdownlint_installed = vim.fn.executable 'markdownlint' == 1
+      if markdownlint_installed then
+        lint.linters_by_ft.markdown = { 'markdownlint' }
+      else
+        lint.linters_by_ft.markdown = nil
+      end
 
       -- To allow other plugins to add linters to require('lint').linters_by_ft,
       -- instead set linters_by_ft like this:
