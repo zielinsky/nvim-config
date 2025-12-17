@@ -37,7 +37,15 @@ return {
 
       metals_config.on_attach = function(client, bufnr)
         vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
-
+        if client.server_capabilities.codeLensProvider then
+          vim.api.nvim_create_autocmd({ 'BufEnter', 'CursorHold', 'InsertLeave' }, {
+            buffer = bufnr,
+            callback = function()
+              vim.lsp.codelens.refresh { bufnr = bufnr }
+            end,
+            group = vim.api.nvim_create_augroup('MetalsCodeLens', { clear = true }),
+          })
+        end
         vim.keymap.set('n', 'm', function()
           local function show_menu(items, title, callback_override)
             vim.ui.select(items, {
@@ -122,6 +130,38 @@ return {
             show_menu(items, 'Refactoring')
           end
 
+          local function open_testing_menu()
+            local items = {
+              {
+                label = 'Run/Debug Test (CodeLens)',
+                func = function()
+                  vim.lsp.codelens.run()
+                end,
+              },
+              {
+                label = 'DAP Continue',
+                func = function()
+                  local dap_status, dap = pcall(require, 'dap')
+                  if dap_status then
+                    dap.continue()
+                  else
+                    vim.notify('Nvim-dap not installed', vim.log.levels.WARN)
+                  end
+                end,
+              },
+              {
+                label = 'DAP Toggle Breakpoint',
+                func = function()
+                  local dap_status, dap = pcall(require, 'dap')
+                  if dap_status then
+                    dap.toggle_breakpoint()
+                  end
+                end,
+              },
+            }
+            show_menu(items, 'Testing')
+          end
+
           local function open_settings_toggles_menu()
             local function label(name, val)
               local status = val and '✅ [ON] ' or '❌ [OFF] '
@@ -195,6 +235,12 @@ return {
                 end,
               },
               {
+                label = 'Metals Switch BSP',
+                func = function()
+                  vim.cmd 'MetalsSwitchBsp'
+                end,
+              },
+              {
                 label = 'Metals Restart Build',
                 func = function()
                   vim.cmd 'MetalsRestartBuild'
@@ -213,6 +259,7 @@ return {
           local main_items = {
             { label = 'Navigation...', func = open_navigation_menu },
             { label = 'Refactoring...', func = open_refactoring_menu },
+            { label = 'Testing...', func = open_testing_menu },
             { label = 'Metals Commands...', func = open_metals_commands_menu },
           }
           show_menu(main_items, 'Metals Main Menu')
